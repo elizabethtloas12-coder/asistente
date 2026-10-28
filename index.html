@@ -1,13 +1,25 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AcademiFX - Asistente Académico Intelligente</title>
-    <!-- Fuente Poppins -->
+    <title>AcademiFX - Asistente Académico Inteligente</title>
+    
+    <!-- Fuente Google Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Iconos Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- PDF.js: Lectura REAL de archivos PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+
+    <!-- Mammoth.js: Lectura REAL de archivos Word (.docx) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -24,7 +36,7 @@
                 <li><a href="#asistente" class="nav-link">Asistente</a></li>
                 <li><a href="#tiempo" class="nav-link">Organizador</a></li>
                 <li><a href="#pausa" class="nav-link">Pausa Creativa</a></li>
-                <li><a href="#asistente" class="btn-nav-cta">Comenzar Ahora</a></li>
+                <li><a href="#asistente" class="btn-nav-cta">Comenzar</a></li>
             </ul>
             <button class="hamburger" id="hamburger" aria-label="Abrir Menú">
                 <i data-lucide="menu"></i>
@@ -35,44 +47,206 @@
     <!-- SECCIÓN PRINCIPAL (HERO) -->
     <header id="hero" class="hero-section">
         <div class="hero-content">
-            <span class="hero-badge"><i data-lucide="sparkles"></i> Tu compañero de estudio integral</span>
+            <span class="hero-badge"><i data-lucide="sparkles"></i> Tu Asistente Académico Integral</span>
             <h1>Potencia tu aprendizaje con <span>Inteligencia y Creatividad</span></h1>
-            <p>Sube tus documentos PDF o Word, resume textos, extrae ideas clave, gestiona tu tiempo en bloques de estudio y desconecta con actividades creativas hechas para ti.</p>
+            <p>Sube tus documentos PDF o Word, analiza ideas clave, traduce, escucha tus lecturas y organiza tu tiempo en bloques de estudio.</p>
             <div class="hero-buttons">
                 <a href="#asistente" class="btn btn-primary">
-                    <i data-lucide="file-text"></i> Analizar Documento
+                    <i data-lucide="file-text"></i> Cargar Documento
                 </a>
                 <a href="#tiempo" class="btn btn-secondary">
-                    <i data-lucide="clock"></i> Organizar Tiempo
+                    <i data-lucide="clock"></i> Cronómetro de Estudio
                 </a>
             </div>
         </div>
     </header>
 
-    <!-- MAIN CONTAINER -->
+    <!-- CONTENEDOR PRINCIPAL -->
     <main class="main-container">
 
-        <!-- SECCIÓN 1: ASISTENTE DE TEXTOS Y DOCUMENTOS -->
+        <!-- SECCIÓN 1: ASISTENTE DE LECTURA Y ANÁLISIS -->
         <section id="asistente" class="card-section">
             <div class="section-header">
                 <h2><i data-lucide="file-code-2"></i> Asistente de Lectura y Análisis</h2>
-                <p>Carga tus archivos o pega texto directamente para procesarlo al instante.</p>
+                <p>Carga un archivo PDF/Word o pega texto directamente en la caja de edición.</p>
             </div>
 
             <div class="asistente-grid">
-                <!-- PANEL IZQUIERDO: ENTRAMOS TEXTO / ARCHIVO -->
+                <!-- PANEL IZQUIERDO: CARGA Y ENTRADA DE TEXTO -->
                 <div class="input-panel">
-                    <!-- Dropzone de archivos -->
                     <div class="file-dropzone" id="dropzone">
                         <i data-lucide="upload-cloud" class="drop-icon"></i>
-                        <p>Arrastra aquí tu archivo <b>PDF</b> o <b>Word (.docx)</b></p>
-                        <span>o haz clic para seleccionar desde tu dispositivo</span>
-                        <input type="file" id="file-input" accept=".pdf, .docx, .doc, .txt">
+                        <p>Arrastra tu archivo <b>PDF</b> o <b>Word (.docx)</b></p>
+                        <span>o haz clic para buscarlo en tu equipo</span>
+                        <input type="file" id="file-input" accept=".pdf, .docx, .txt">
                         <div id="file-info" class="file-info"></div>
                     </div>
 
-                    <div class="divider"><span>O pega tu texto aquí</span></div>
+                    <div class="divider"><span>O escribe / pega tu texto aquí</span></div>
 
-                    <textarea id="text-input" placeholder="Pega el contenido de tu tarea, investigación o lecturas aquí..."></textarea>
+                    <textarea id="text-input" placeholder="Pega o edita aquí el contenido que deseas analizar..."></textarea>
 
                     <div class="action-buttons">
+                        <button class="btn-action" onclick="procesarTexto('resumen')">
+                            <i data-lucide="align-left"></i> Resumir
+                        </button>
+                        <button class="btn-action" onclick="procesarTexto('ideas')">
+                            <i data-lucide="list-checks"></i> Ideas Clave
+                        </button>
+                        <button class="btn-action" onclick="traducirTexto()">
+                            <i data-lucide="languages"></i> Traducir
+                        </button>
+                        <select id="lang-select" class="select-lang">
+                            <option value="en">Inglés</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Francés</option>
+                            <option value="de">Alemán</option>
+                            <option value="it">Italiano</option>
+                            <option value="pt">Portugués</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PANEL DERECHO: RESULTADOS Y LECTOR DE VOZ -->
+                <div class="output-panel">
+                    <div class="output-header">
+                        <h3>Resultado del Análisis</h3>
+                        <div class="tts-controls">
+                            <button id="btn-play" class="btn-icon" title="Leer texto seleccionado/completo" onclick="leerTexto()">
+                                <i data-lucide="volume-2"></i>
+                            </button>
+                            <button id="btn-pause" class="btn-icon hidden" title="Pausar lectura" onclick="pausarTexto()">
+                                <i data-lucide="pause"></i>
+                            </button>
+                            <button id="btn-stop" class="btn-icon hidden" title="Detener lectura" onclick="detenerTexto()">
+                                <i data-lucide="square"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="output-box" class="output-box">
+                        <p class="placeholder-text">Sube un archivo o escribe texto. Selecciona cualquier fragmento y presiona el ícono del altavoz para escucharlo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: ORGANIZADOR DE TIEMPO -->
+        <section id="tiempo" class="card-section">
+            <div class="section-header">
+                <h2><i data-lucide="clock"></i> Cronómetro y Bloques de Estudio</h2>
+                <p>Gestiona tus sesiones con la técnica Pomodoro y planifica tus asignaturas.</p>
+            </div>
+
+            <div class="tiempo-grid">
+                <!-- CRONÓMETRO POMODORO -->
+                <div class="timer-card">
+                    <div class="timer-mode-selector">
+                        <button class="mode-btn active" onclick="setTimerMode('pomodoro')">Estudio (25m)</button>
+                        <button class="mode-btn" onclick="setTimerMode('short')">Pausa (5m)</button>
+                        <button class="mode-btn" onclick="setTimerMode('long')">Descanso (15m)</button>
+                    </div>
+
+                    <div class="timer-display" id="timer-display">25:00</div>
+
+                    <div class="timer-controls">
+                        <button id="btn-timer-start" class="btn btn-primary" onclick="toggleTimer()">
+                            <i data-lucide="play"></i> Iniciar
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetTimer()">
+                            <i data-lucide="rotate-ccw"></i> Reiniciar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BLOQUES DE TAREAS -->
+                <div class="tasks-card">
+                    <h3><i data-lucide="check-square"></i> Bloques de Tareas</h3>
+                    <div class="task-input-group">
+                        <input type="text" id="task-input" placeholder="Nombre de la tarea o asignatura...">
+                        <input type="number" id="task-time" placeholder="Min" min="5" max="180" value="25">
+                        <button class="btn btn-primary" onclick="agregarTarea()">
+                            <i data-lucide="plus"></i>
+                        </button>
+                    </div>
+                    <ul id="task-list" class="task-list">
+                        <!-- Tareas añadidas dinámicamente -->
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: PAUSA CREATIVA -->
+        <section id="pausa" class="card-section">
+            <div class="section-header">
+                <h2><i data-lucide="scissors"></i> Pausa Creativa y Desconexión</h2>
+                <p>Relaja tu mente entre bloques de estudio con bordado, tejido, origami o manualidades.</p>
+            </div>
+
+            <div class="creative-toolbar">
+                <button class="filter-btn active" onclick="filtrarManualidades('todas')">Todas</button>
+                <button class="filter-btn" onclick="filtrarManualidades('costura')">Coser y Tejer</button>
+                <button class="filter-btn" onclick="filtrarManualidades('papel')">Origami y Papel</button>
+                <button class="filter-btn" onclick="filtrarManualidades('reciclaje')">Manualidades</button>
+                <button class="btn btn-secondary" onclick="recomendarAleatoria()" style="margin-left:auto;">
+                    <i data-lucide="shuffle"></i> Sugerir Actividad
+                </button>
+            </div>
+
+            <div class="crafts-grid" id="crafts-grid">
+                <!-- Tarjetas cargadas dinámicamente -->
+            </div>
+        </section>
+
+        <!-- LLAMADA A LA ACCIÓN (CTA) -->
+        <section class="cta-banner">
+            <div class="cta-content">
+                <h2>¿Listo para organizar tu tiempo y aprobar con éxito?</h2>
+                <p>Carga tus archivos académicos y mantén tu concentración al máximo nivel.</p>
+                <a href="#asistente" class="btn btn-cta">
+                    <i data-lucide="rocket"></i> Comenzar Ahora
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                    <i data-lucide="graduation-cap"></i>
+                    <span>Academi<b>FX</b></span>
+                </a>
+                <p>Plataforma académica diseñada para la optimización del estudio, la lectura asistida y el equilibrio de tiempo.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Navegación</h4>
+                <ul>
+                    <li><a href="#hero">Inicio</a></li>
+                    <li><a href="#asistente">Asistente</a></li>
+                    <li><a href="#tiempo">Organizador</a></li>
+                    <li><a href="#pausa">Pausa Creativa</a></li>
+                </ul>
+            </div>
+            <div class="footer-social">
+                <h4>Comunidad</h4>
+                <div class="social-icons">
+                    <a href="#" aria-label="GitHub"><i data-lucide="github"></i></a>
+                    <a href="#" aria-label="Twitter"><i data-lucide="twitter"></i></a>
+                    <a href="#" aria-label="Instagram"><i data-lucide="instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 AcademiFX - Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Notificaciones Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>               
