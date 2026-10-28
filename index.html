@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcademiFX - Asistente Académico Intelligente</title>
+    <!-- Fuente Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- BARRA DE NAVEGACIÓN -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <i data-lucide="graduation-cap"></i>
+                <span>Academi<b>FX</b></span>
+            </a>
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="#hero" class="nav-link active">Inicio</a></li>
+                <li><a href="#asistente" class="nav-link">Asistente</a></li>
+                <li><a href="#tiempo" class="nav-link">Organizador</a></li>
+                <li><a href="#pausa" class="nav-link">Pausa Creativa</a></li>
+                <li><a href="#asistente" class="btn-nav-cta">Comenzar Ahora</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger" aria-label="Abrir Menú">
+                <i data-lucide="menu"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- SECCIÓN PRINCIPAL (HERO) -->
+    <header id="hero" class="hero-section">
+        <div class="hero-content">
+            <span class="hero-badge"><i data-lucide="sparkles"></i> Tu compañero de estudio integral</span>
+            <h1>Potencia tu aprendizaje con <span>Inteligencia y Creatividad</span></h1>
+            <p>Sube tus documentos PDF o Word, resume textos, extrae ideas clave, gestiona tu tiempo en bloques de estudio y desconecta con actividades creativas hechas para ti.</p>
+            <div class="hero-buttons">
+                <a href="#asistente" class="btn btn-primary">
+                    <i data-lucide="file-text"></i> Analizar Documento
+                </a>
+                <a href="#tiempo" class="btn btn-secondary">
+                    <i data-lucide="clock"></i> Organizar Tiempo
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="main-container">
+
+        <!-- SECCIÓN 1: ASISTENTE DE TEXTOS Y DOCUMENTOS -->
+        <section id="asistente" class="card-section">
+            <div class="section-header">
+                <h2><i data-lucide="file-code-2"></i> Asistente de Lectura y Análisis</h2>
+                <p>Carga tus archivos o pega texto directamente para procesarlo al instante.</p>
+            </div>
+
+            <div class="asistente-grid">
+                <!-- PANEL IZQUIERDO: ENTRAMOS TEXTO / ARCHIVO -->
+                <div class="input-panel">
+                    <!-- Dropzone de archivos -->
+                    <div class="file-dropzone" id="dropzone">
+                        <i data-lucide="upload-cloud" class="drop-icon"></i>
+                        <p>Arrastra aquí tu archivo <b>PDF</b> o <b>Word (.docx)</b></p>
+                        <span>o haz clic para seleccionar desde tu dispositivo</span>
+                        <input type="file" id="file-input" accept=".pdf, .docx, .doc, .txt">
+                        <div id="file-info" class="file-info"></div>
+                    </div>
+
+                    <div class="divider"><span>O pega tu texto aquí</span></div>
+
+                    <textarea id="text-input" placeholder="Pega el contenido de tu tarea, investigación o lecturas aquí..."></textarea>
+
+                    <div class="action-buttons">
