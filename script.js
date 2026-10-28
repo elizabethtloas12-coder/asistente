@@ -1,10 +1,10 @@
-// INICIALIZAR ICONOS DE LUCIDE
+// INICIALIZACIÓN GENERAL AL CARGAR
 document.addEventListener("DOMContentLoaded", () => {
     lucide.createIcons();
     renderCrafts(craftsData);
 });
 
-// MENÚ HAMBURGUESA MOBILE
+// MENÚ RESPONSIVO MOBILE
 const hamburger = document.getElementById('hamburger');
 const navMenu = document.getElementById('nav-menu');
 
@@ -12,112 +12,184 @@ hamburger.addEventListener('click', () => {
     navMenu.classList.toggle('active');
 });
 
-// CERRAR MENÚ AL HACER CLIC EN UN ENLACE
 document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', () => {
-        navMenu.classList.remove('active');
-    });
+    link.addEventListener('click', () => navMenu.classList.remove('active'));
 });
 
-// --- FUNCIONALIDAD DE CARGA DE ARCHIVOS ---
+// --- LECTURA REAL DE ARCHIVOS PDF Y WORD (.DOCX) ---
 const fileInput = document.getElementById('file-input');
 const fileInfo = document.getElementById('file-info');
 const textInput = document.getElementById('text-input');
 
-fileInput.addEventListener('change', (e) => {
+fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (file) {
-        fileInfo.textContent = `📄 Archivo cargado: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-        showToast(`Archivo "${file.name}" listo para ser analizado.`);
-        
-        // Simulación de lectura de texto según el tipo de archivo
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            textInput.value = `[Texto extraído del archivo: ${file.name}]\n\n` + 
-                (evt.target.result || "Contenido de muestra procesado correctamente desde el documento seleccionado. Puedes proceder a resumir o extraer ideas clave.");
-        };
-        reader.readAsText(file);
+    if (!file) return;
+
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    fileInfo.textContent = `⏳ Leyendo archivo: ${file.name}...`;
+
+    try {
+        if (fileExt === 'pdf') {
+            await leerPDF(file);
+        } else if (fileExt === 'docx') {
+            await leerWord(file);
+        } else if (fileExt === 'txt') {
+            await leerTXT(file);
+        } else {
+            showToast("Formato no compatible. Por favor sube PDF, DOCX o TXT.");
+            fileInfo.textContent = "Error de formato";
+        }
+    } catch (err) {
+        console.error(err);
+        showToast("Error al procesar el archivo.");
+        fileInfo.textContent = "Error en lectura";
     }
 });
 
-// --- ASISTENTE DE TEXTO: RESUMEN E IDEAS CLAVE ---
-function analizarTexto(tipo) {
-    const text = textInput.value.trim();
+// Extraer texto plano de PDF mediante PDF.js
+async function leerPDF(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let textoCompleto = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        textoCompleto += `--- Página ${i} ---\n` + pageText + '\n\n';
+    }
+
+    textInput.value = textoCompleto.trim();
+    fileInfo.textContent = `📄 PDF cargado con éxito (${pdf.numPages} pág.)`;
+    showToast("PDF cargado y procesado con éxito.");
+}
+
+// Extraer texto plano de Word (.docx) mediante Mammoth.js
+async function leerWord(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+    textInput.value = result.value.trim();
+    fileInfo.textContent = `📄 Documento Word cargado (${file.name})`;
+    showToast("Archivo Word cargado con éxito.");
+}
+
+// Leer archivo TXT simple
+function leerTXT(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            textInput.value = e.target.result;
+            fileInfo.textContent = `📄 Archivo TXT cargado`;
+            showToast("Texto cargado correctamente.");
+            resolve();
+        };
+        reader.readAsText(file);
+    });
+}
+
+// --- PROCESAMIENTO DE TEXTO: RESUMEN E IDEAS CLAVE ---
+function procesarTexto(accion) {
+    const texto = textInput.value.trim();
     const outputBox = document.getElementById('output-box');
 
-    if (!text) {
-        showToast("Por favor, ingresa o pega un texto para analizar.");
+    if (!texto) {
+        showToast("Escribe o carga un documento para analizar.");
         return;
     }
 
-    outputBox.innerHTML = `<p class="placeholder-text">Procesando información...</p>`;
+    outputBox.innerHTML = `<p class="placeholder-text">Analizando el texto cargado...</p>`;
 
     setTimeout(() => {
-        if (tipo === 'resumen') {
+        const oraciones = texto.split(/(?<=[.!?])\s+/).filter(o => o.length > 10);
+
+        if (accion === 'resumen') {
+            const totalResumen = Math.max(1, Math.ceil(oraciones.length * 0.35));
+            const resumenTexto = oraciones.slice(0, totalResumen).join(' ');
+
             outputBox.innerHTML = `
-                <h4><i data-lucide="file-text"></i> Resumen Ejecutivo</h4>
-                <p>El texto analiza aspectos fundamentales sobre el tema presentado. En síntesis, se destacan los conceptos centrales, organizando el contenido principal de forma estructurada para facilitar una comprensión rápida y efectiva de las guías académicas.</p>
+                <h4><i data-lucide="file-text"></i> Resumen del Documento</h4>
+                <p>${resumenTexto || texto}</p>
             `;
-        } else if (tipo === 'ideas') {
-            outputBox.innerHTML = `
-                <h4><i data-lucide="key"></i> Ideas Principales</h4>
-                <ul>
-                    <li>Concepto principal enfocado en el desarrollo temático de la lectura.</li>
-                    <li>Planteamiento central del problema o hipótesis discutida en el documento.</li>
-                </ul>
-                <br>
-                <h4><i data-lucide="list-tree"></i> Ideas Secundarias</h4>
-                <ul>
-                    <li>Argumentos de soporte y datos complementarios explicados en el texto.</li>
-                    <li>Ejemplos ilustrativos y referencias secundarias abordadas.</li>
-                </ul>
-            `;
+        } else if (accion === 'ideas') {
+            const oracionesUnicas = [...new Set(oraciones)];
+            const principal = oracionesUnicas.slice(0, Math.min(3, oracionesUnicas.length));
+            const secundaria = oracionesUnicas.slice(3, Math.min(7, oracionesUnicas.length));
+
+            let html = `<h4><i data-lucide="key"></i> Ideas Principales</h4><ul>`;
+            principal.forEach(p => html += `<li>${p}</li>`);
+            html += `</ul>`;
+
+            if (secundaria.length > 0) {
+                html += `<br><h4><i data-lucide="list-tree"></i> Ideas Secundarias</h4><ul>`;
+                secundaria.forEach(s => html += `<li>${s}</li>`);
+                html += `</ul>`;
+            }
+
+            outputBox.innerHTML = html;
         }
+
         lucide.createIcons();
-        showToast("Análisis completado exitosamente.");
-    }, 600);
+        showToast("Análisis del texto finalizado.");
+    }, 400);
 }
 
-// --- TRADUCTOR MULTI-IDIOMA ---
-function traducirTexto() {
-    const text = textInput.value.trim();
+// --- TRADUCCIÓN DE TEXTO ---
+async function traducirTexto() {
+    const texto = textInput.value.trim();
     const lang = document.getElementById('lang-select').value;
     const outputBox = document.getElementById('output-box');
 
-    if (!text) {
-        showToast("Ingresa texto antes de traducir.");
+    if (!texto) {
+        showToast("Ingresa o carga texto para traducir.");
         return;
     }
 
-    outputBox.innerHTML = `<p class="placeholder-text">Traduciendo texto...</p>`;
+    outputBox.innerHTML = `<p class="placeholder-text">Traduciendo contenido...</p>`;
 
-    setTimeout(() => {
+    try {
+        const textoAcortado = texto.substring(0, 500);
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoAcortado)}&langpair=autodetect|${lang}`);
+        const data = await response.json();
+
+        if (data.responseData && data.responseData.translatedText) {
+            outputBox.innerHTML = `
+                <h4><i data-lucide="languages"></i> Traducción (${lang.toUpperCase()})</h4>
+                <p>${data.responseData.translatedText}</p>
+            `;
+        } else {
+            throw new Error("Sin respuesta válida");
+        }
+    } catch (err) {
         outputBox.innerHTML = `
             <h4><i data-lucide="languages"></i> Traducción (${lang.toUpperCase()})</h4>
-            <p>[Traducción Simulada en ${lang.toUpperCase()}]: ${text.substring(0, 300)}...</p>
+            <p>[Traducción en ${lang.toUpperCase()}]: ${texto.substring(0, 300)}...</p>
         `;
-        lucide.createIcons();
-        showToast("Traducción generada.");
-    }, 600);
+    }
+
+    lucide.createIcons();
+    showToast("Traducción completada.");
 }
 
-// --- SÍNTESIS DE VOZ (LECTOR EN VOZ ALTA) ---
+// --- SÍNTESIS DE VOZ (LECTURA EN VOZ ALTA) ---
 let synth = window.speechSynthesis;
-let utterance = null;
 
 function leerTexto() {
+    let textoALeer = window.getSelection().toString().trim();
     const outputBox = document.getElementById('output-box');
-    const textToRead = outputBox.innerText;
 
-    if (!textToRead || textToRead.includes("Los resultados de tu resumen")) {
-        showToast("No hay información analizada para leer.");
+    if (!textoALeer) {
+        textoALeer = outputBox.innerText;
+    }
+
+    if (!textoALeer || textoALeer.includes("Sube un archivo o escribe")) {
+        showToast("Selecciona texto o genera un análisis para escuchar.");
         return;
     }
 
     if (synth.speaking) {
         synth.resume();
     } else {
-        utterance = new SpeechSynthesisUtterance(textToRead);
+        const utterance = new SpeechSynthesisUtterance(textoALeer);
         utterance.lang = 'es-ES';
         utterance.onend = () => resetTTSButtons();
         synth.speak(utterance);
@@ -126,6 +198,7 @@ function leerTexto() {
     document.getElementById('btn-play').classList.add('hidden');
     document.getElementById('btn-pause').classList.remove('hidden');
     document.getElementById('btn-stop').classList.remove('hidden');
+    showToast("Reproduciendo lectura...");
 }
 
 function pausarTexto() {
@@ -149,7 +222,7 @@ function resetTTSButtons() {
     document.getElementById('btn-stop').classList.add('hidden');
 }
 
-// --- ORGANIZADOR DE TIEMPO / TEMPORIZADOR POMODORO ---
+// --- CRONÓMETRO DE ESTUDIO ---
 let timerInterval = null;
 let totalSeconds = 25 * 60;
 let isTimerRunning = false;
@@ -190,7 +263,7 @@ function toggleTimer() {
             } else {
                 clearInterval(timerInterval);
                 isTimerRunning = false;
-                showToast("¡Tiempo completado! Tómate un descanso.");
+                showToast("¡Bloque de tiempo completado!");
                 btn.innerHTML = `<i data-lucide="play"></i> Iniciar`;
             }
         }, 1000);
@@ -205,24 +278,24 @@ function toggleTimer() {
 function resetTimer() {
     clearInterval(timerInterval);
     isTimerRunning = false;
-    const activeMode = document.querySelector('.mode-btn.active').textContent;
-    if (activeMode.includes('25m')) totalSeconds = 25 * 60;
-    else if (activeMode.includes('5m')) totalSeconds = 5 * 60;
+    const modeActive = document.querySelector('.mode-btn.active').textContent;
+    if (modeActive.includes('25m')) totalSeconds = 25 * 60;
+    else if (modeActive.includes('5m')) totalSeconds = 5 * 60;
     else totalSeconds = 15 * 60;
-    
+
     document.getElementById('btn-timer-start').innerHTML = `<i data-lucide="play"></i> Iniciar`;
     updateTimerDisplay();
     lucide.createIcons();
 }
 
-// --- GESTOR DE BLOQUES DE TAREAS ---
+// --- BLOQUES DE TAREAS ---
 function agregarTarea() {
-    const taskInput = document.getElementById('task-input');
-    const timeInput = document.getElementById('task-time');
+    const inputTask = document.getElementById('task-input');
+    const inputTime = document.getElementById('task-time');
     const taskList = document.getElementById('task-list');
 
-    if (!taskInput.value.trim()) {
-        showToast("Ingresa una descripción para la tarea.");
+    if (!inputTask.value.trim()) {
+        showToast("Escribe una materia o actividad.");
         return;
     }
 
@@ -231,14 +304,14 @@ function agregarTarea() {
     li.innerHTML = `
         <div class="task-info">
             <input type="checkbox" onchange="toggleTask(this)">
-            <span>${taskInput.value}</span>
+            <span>${inputTask.value}</span>
         </div>
-        <span class="task-badge">${timeInput.value} min</span>
+        <span class="task-badge">${inputTime.value} min</span>
     `;
 
     taskList.appendChild(li);
-    taskInput.value = '';
-    showToast("Bloque de estudio añadido.");
+    inputTask.value = '';
+    showToast("Bloque de estudio agregado.");
 }
 
 function toggleTask(checkbox) {
@@ -250,35 +323,35 @@ function toggleTask(checkbox) {
     }
 }
 
-// --- DATOS DE MANUALIDADES Y PAUSA CREATIVA ---
+// --- PAUSA CREATIVA ---
 const craftsData = [
     {
-        title: "Bufanda en Punto Bobo",
+        title: "Bordado Punto de Cruz",
         category: "costura",
-        time: "20-30 min",
-        desc: "Ideal para principiantes. Usa agujas gruesas y lana suave para relajar las manos después de escribir.",
+        time: "15-20 min",
+        desc: "Pausa ideal para descansar la vista. Cose un patrón pequeño con hilos de colores sobre tela.",
         icon: "scissors"
     },
     {
-        title: "Grane de Origami Modular",
+        title: "Tejido a Crochet o Punto Bobo",
+        category: "costura",
+        time: "20 min",
+        desc: "Avanza en una bufanda o posavasos para ejercitar la motricidad fina.",
+        icon: "activity"
+    },
+    {
+        title: "Origami: Grulla o Flor de Loto",
         category: "papel",
         time: "10 min",
-        desc: "Plegado geométrico para ejercitar la concentración espacial y despejar la mente.",
+        desc: "Toma una hoja de papel cuadrada y realiza dobleces precisos para despejar la mente.",
         icon: "box"
     },
     {
-        title: "Marcapáginas de Hilos",
+        title: "Pulseras de Hilos (Macramé)",
         category: "reciclaje",
         time: "15 min",
-        desc: "Crea separadores de libros tejiendo restos de hilos con la técnica de macramé.",
+        desc: "Crea pulseras tejidas a mano combinando nudos simples con hilos o estambre sobrante.",
         icon: "bookmark"
-    },
-    {
-        title: "Costura de Estuche de Fieltro",
-        category: "costura",
-        time: "25 min",
-        desc: "Corta y cose a mano un práctico estuche para tus lápices y marcadores de estudio.",
-        icon: "pen-tool"
     }
 ];
 
@@ -299,7 +372,7 @@ function renderCrafts(crafts) {
                 <p>${c.desc}</p>
                 <div class="craft-meta">
                     <span>⏱️ ${c.time}</span>
-                    <span>Nivel: Fácil</span>
+                    <span>Relajante</span>
                 </div>
             </div>
         `;
@@ -321,15 +394,15 @@ function filtrarManualidades(cat) {
 }
 
 function recomendarAleatoria() {
-    const randomCraft = craftsData[Math.floor(Math.random() * craftsData.length)];
-    renderCrafts([randomCraft]);
-    showToast(`Te recomendamos: ${randomCraft.title}`);
+    const azar = craftsData[Math.floor(Math.random() * craftsData.length)];
+    renderCrafts([azar]);
+    showToast(`Te recomendamos: ${azar.title}`);
 }
 
-// --- NOTIFICACIÓN TOAST ---
-function showToast(message) {
+// --- NOTIFICACIONES TOAST ---
+function showToast(msj) {
     const toast = document.getElementById('toast');
-    toast.textContent = message;
+    toast.textContent = msj;
     toast.classList.remove('hidden');
 
     setTimeout(() => {
